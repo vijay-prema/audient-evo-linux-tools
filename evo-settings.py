@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Run lsusb to find device (plug and unplug run twice)
 # Then Get data on Audient EVO 4 audio interface:
 # lsusb -v -d 2708:0006
@@ -10,12 +12,32 @@
 import usb.core
 import usb.util
 
-# find our device
-dev = usb.core.find(idVendor=0x2708, idProduct=0x0006)
+def find_device():
+    audient_vendor_id = 0x2708
 
-# was it found?
-if dev is None:
+    products = {
+            0x0006: "Audient EVO4",
+            0x0007: "Audient EVO8",
+    }
+
+    for product_id, product_name in products.items():
+        dev = usb.core.find(idVendor=audient_vendor_id, idProduct=product_id)
+        if dev is not None:
+            print(f"Found {product_name}")
+            return dev
+
     raise ValueError('Device not found')
+
+def set_phantom_power(channel, power_on):
+    # 48V (channel 1). First byte is 0x01 or 0x00 for on or off
+    if power_on is True:
+        dataFragment = b'\x01\x00\x00\x00'
+    else:
+        dataFragment = b'\x00\x00\x00\x00'
+
+    assert dev.ctrl_transfer(0x21, 1, 0x0000, 0x3a00, dataFragment) == len(dataFragment)
+
+dev = find_device()
 
 reattach = False
 if dev.is_kernel_driver_active(0):
@@ -36,11 +58,11 @@ dev.set_configuration()
 # Headphone Volume. 2nd byte in data is volume level from 0x00 to 0xff
 dataFragment = b'\x00\xf0\xff\xff'
 assert dev.ctrl_transfer(0x21, 1, 0x0000, 0x3b00, dataFragment) == len(dataFragment)
-# 48V (channel 1). First byte is 0x01 or 0x00 for on or off
-dataFragment = b'\x01\x00\x00\x00'
-assert dev.ctrl_transfer(0x21, 1, 0x0000, 0x3a00, dataFragment) == len(dataFragment)
+
+set_phantom_power(1, True)
+
 # Mic (channel 1) Volume. 2nd byte in data is volume level from 0x00 to 0x31
-dataFragment = b'\x00\x1f\x00\x00'
+dataFragment = b'\x00\x61\x00\x00'
 assert dev.ctrl_transfer(0x21, 1, 0x0100, 0x3a00, dataFragment) == len(dataFragment)
 
 
