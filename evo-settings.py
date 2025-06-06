@@ -18,6 +18,7 @@ def find_device():
     products = {
             0x0006: "Audient EVO4",
             0x0007: "Audient EVO8",
+            0x000a: "Audient EVO16",
     }
 
     for product_id, product_name in products.items():
